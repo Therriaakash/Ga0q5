@@ -52,37 +52,14 @@ def execute_python_code(code: str):
 
 
 def analyze_error_with_ai(code: str, tb: str):
-    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    import re
 
-    prompt = f"""
-Analyze the following Python code and traceback.
+    for line in tb.splitlines():
+        m = re.search(r'line (\d+)', line)
+        if m:
+            return [int(m.group(1))]
 
-CODE:
-{code}
-
-TRACEBACK:
-{tb}
-
-Return the line number(s) where the error occurred.
-"""
-
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema={
-                "type": "object",
-                "properties": {
-                    "error_lines": {"type": "array", "items": {"type": "integer"}}
-                },
-                "required": ["error_lines"],
-            },
-        ),
-    )
-
-    result = ErrorAnalysis.model_validate_json(response.text)
-    return result.error_lines
+    return []
 
 
 @app.get("/")
