@@ -8,6 +8,8 @@ from io import StringIO
 import traceback
 import sys
 import os
+import re
+
 
 from google import genai
 from google.genai import types
@@ -41,25 +43,32 @@ def execute_python_code(code: str):
     sys.stdout = StringIO()
 
     try:
-        exec(code, {})
-        output = sys.stdout.getvalue()
-        return {"success": True, "output": output}
+        compiled = compile(code, "<user_code>", "exec")
+        exec(compiled, {})
+
+        return {
+            "success": True,
+            "output": sys.stdout.getvalue()
+        }
 
     except Exception:
-        output = traceback.format_exc()
-        return {"success": False, "output": output}
+        return {
+            "success": False,
+            "output": traceback.format_exc()
+        }
 
     finally:
         sys.stdout = old_stdout
 
 
 def analyze_error_with_ai(code: str, tb: str):
-    import re
+    match = re.search(
+        r'File "<user_code>", line (\d+)',
+        tb
+    )
 
-    for line in tb.splitlines():
-        m = re.search(r'line (\d+)', line)
-        if m:
-            return [int(m.group(1))]
+    if match:
+        return [int(match.group(1))]
 
     return []
 
